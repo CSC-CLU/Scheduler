@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+apply plugin: 'java'
+apply plugin: 'application'
+
+mainClassName = 'Bot'
+sourceCompatibility = 11
+targetCompatibility = 11
+version = '1.0'
+
+group 'org.clu-csc'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    implementation 'com.github.DV8FromtheWorld:JDA:v5.0.0-alpha.13'
+    implementation 'com.google.api-client:google-api-client:1.33.0'
+    implementation 'com.google.oauth-client:google-oauth-client-jetty:1.32.1'
+    implementation 'com.google.apis:google-api-services-calendar:v3-rev20211026-1.32.1'
+    //testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    //testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+//test {
+//    useJUnitPlatform()
+//}
