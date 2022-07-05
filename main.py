@@ -1,6 +1,6 @@
 import interactions
-
-bot = interactions.Client(token='OTcwNTM2OTQ5ODYzNTY3NDIw.Ym9Y-A.7E6egnvfQXXURm8kqg-nW4GuiDU')
+import sys
+bot = interactions.Client(token=sys.argv[1])
 
 
 @bot.command(name="update_events", description="populate the discord with this week's hours")
