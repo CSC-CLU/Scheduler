@@ -1,12 +1,11 @@
 import datetime
-import pytz
 import re
 import interactions
-import sys
+from sys import argv
 
-bot = interactions.Client(token=sys.argv[1])
+from timezone import PST
 
-
+bot = interactions.Client(token=argv[1])
 @bot.command(name="update_events", description="populate the discord with this week's hours")
 async def update_events(ctx: interactions.CommandContext):
     await ctx.send("Events updated!")
@@ -14,7 +13,9 @@ async def update_events(ctx: interactions.CommandContext):
 
 @bot.command(name="clear_events", description="clear all events created by this bot")
 async def clear_events(ctx: interactions.CommandContext):
-    await ctx.send("Events cleared!")
+    await ctx.get_guild()
+    interactions.api.http.Route("GET", f"/guilds/{ctx.guild.id}")
+    print(ctx.guild.guild_scheduled_events)
 
 
 day_of_week = interactions.Option(
@@ -64,8 +65,9 @@ async def add(ctx: interactions.CommandContext,
             hour = int(groups['hour'])
             if groups['m'] == 'pm':
                 hour += 12
-            return datetime.datetime(date.year, date.month, date.day, hour, int(groups['min']),
-                                     tzinfo=pytz.timezone('America/Los_Angeles'))
+            return datetime.datetime(date.year, date.month, date.day,
+                                     hour, int(groups['min']),
+                                     tzinfo=PST())
         return None
 
     start_time = time(start_time)
