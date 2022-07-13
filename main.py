@@ -66,9 +66,11 @@ day_of_week = interactions.Option(
              ])
 async def add(ctx: interactions.CommandContext,
               user: interactions.User, day, start_time, end_time):
+    # todo move to own method logic
     today = datetime.date.today()
     days_from_today = ((day + 7) - today.weekday()) % 7
     # calculate new date
+    date = today + datetime.timedelta(days=days_from_today)
     date = datetime.date.fromordinal(today.toordinal() + days_from_today)
     # calculate proper start time
     time_format_m = re.compile("(?P<hour>1[0-2]|[1-9])(:(?P<min>[0-5]\\d)|)(?P<m>[a|p]m)")
@@ -80,6 +82,7 @@ async def add(ctx: interactions.CommandContext,
             hour = int(groups['hour'])
             if groups['m'] == 'pm':
                 hour += 12
+                hour %= 24
             minutes = groups.get('min')
             return datetime.datetime(date.year, date.month, date.day,
                                      hour,
@@ -89,6 +92,12 @@ async def add(ctx: interactions.CommandContext,
 
     start_time = time(start_time)
     end_time = time(end_time)
+
+    if start_time.replace(tzinfo=None) < datetime.datetime.now():
+        # todo determine if we want to simply specify a duration instead of an end time.
+        start_time += datetime.timedelta(weeks=1)
+        end_time += datetime.timedelta(weeks=1)
+
     if start_time is not None and end_time is not None:
         await ctx.get_guild()
         await ctx.guild.create_scheduled_event(
