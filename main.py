@@ -106,7 +106,10 @@ async def add(ctx: interactions.CommandContext,
             interactions.EventMetadata(location='D13'),
             description=f"{user.mention} will be holding DA hours.",
         )
-        await ctx.send(f"Added hours for {user.mention} at {start_time.isoformat()} to {end_time.isoformat()}")
+        msg = f"Added hours for {user.mention} on " \
+              + start_time.strftime("%a %m/%d from %I:%M%p") \
+              + " to " + end_time.strftime("%I:%M%p")
+        await ctx.send(msg)
     else:
         await ctx.send("Invalid time entry")
 
