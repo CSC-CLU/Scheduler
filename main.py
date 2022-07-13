@@ -33,6 +33,47 @@ async def clear_events(ctx: interactions.CommandContext):
         res = "No events deleted."
     await ctx.send(res)
 
+
+@bot.command(name="get_hours",
+             description="get the events corresponding to a given user's DA hours",
+             options=[
+                 interactions.Option(name="user",
+                                     description="Departmental Assistance holding the hours",
+                                     type=interactions.OptionType.USER,
+                                     required=True)
+             ])
+async def get_hours(ctx: interactions.CommandContext, user: interactions.User):
+    await ctx.get_guild()
+    # event description starts with the DA user
+    matches = filter(lambda event: event.description.startswith(user.mention), (await get_scheduled_events(ctx))[::-1])
+    res = str.join('\n', map(lambda e: 'https://discord.gg/whW3SsZUqG?event=' + str(e.id), matches))
+    await ctx.send(res if res else f"No events found for {user.mention}")
+def __relative_date(day: int):
+    today = datetime.date.today()
+    days_from_today = ((day + 7) - today.weekday()) % 7
+    # calculate new date
+    return today + datetime.timedelta(days=days_from_today)
+
+
+time_format_m = re.compile("(?P<hour>1[0-2]|[1-9])(:(?P<min>[0-5]\\d)|)(?P<m>[a|p]m)")
+
+def __time12(time_str):
+    match = time_format_m.fullmatch(time_str)
+    if match:
+        groups: dict = match.groupdict()
+        hour = int(groups['hour'])
+        if groups['m'] == 'pm':
+            hour += 12
+            hour %= 24
+        minutes = groups.get('min')
+        return datetime.time(hour, int(minutes) if minutes is not None else 0, tzinfo=timezone.Pacific)
+    return None
+
+
+def __datetime(date: datetime.date, time: datetime.time) -> datetime.datetime:
+    return datetime.datetime(date.year,date.month,date.day,time.hour,time.minute,time.second,time.microsecond,time.tzinfo)
+
+
 day_of_week = interactions.Option(
     name="day", description="day being held",
     type=interactions.OptionType.INTEGER,
@@ -67,31 +108,10 @@ day_of_week = interactions.Option(
 async def add(ctx: interactions.CommandContext,
               user: interactions.User, day, start_time, end_time):
     # todo move to own method logic
-    today = datetime.date.today()
-    days_from_today = ((day + 7) - today.weekday()) % 7
-    # calculate new date
-    date = today + datetime.timedelta(days=days_from_today)
-    date = datetime.date.fromordinal(today.toordinal() + days_from_today)
+    date = __relative_date(day)
     # calculate proper start time
-    time_format_m = re.compile("(?P<hour>1[0-2]|[1-9])(:(?P<min>[0-5]\\d)|)(?P<m>[a|p]m)")
-
-    def time(time):
-        match = time_format_m.fullmatch(time)
-        if match:
-            groups: dict = match.groupdict()
-            hour = int(groups['hour'])
-            if groups['m'] == 'pm':
-                hour += 12
-                hour %= 24
-            minutes = groups.get('min')
-            return datetime.datetime(date.year, date.month, date.day,
-                                     hour,
-                                     int(minutes) if minutes is not None else 0,
-                                     tzinfo=timezone.Pacific)
-        return None
-
-    start_time = time(start_time)
-    end_time = time(end_time)
+    start_time = __datetime(date, __time12(start_time))
+    end_time = __datetime(date, __time12(end_time))
 
     if start_time.replace(tzinfo=None) < datetime.datetime.now():
         # todo determine if we want to simply specify a duration instead of an end time.
