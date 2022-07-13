@@ -71,17 +71,18 @@ async def add(ctx: interactions.CommandContext,
     # calculate new date
     date = datetime.date.fromordinal(today.toordinal() + days_from_today)
     # calculate proper start time
-    regex = re.compile("(?P<hour>\\d{1,2}):(?P<min>\\d{2})(?P<m>[a|p]m)?", re.IGNORECASE)
+    time_format_m = re.compile("(?P<hour>1[0-2]|[1-9])(:(?P<min>[0-5]\\d)|)(?P<m>[a|p]m)")
 
     def time(time):
-        match = regex.fullmatch(time)
+        match = time_format_m.fullmatch(time)
         if match:
             groups: dict = match.groupdict()
             hour = int(groups['hour'])
             if groups['m'] == 'pm':
                 hour += 12
+            minutes = groups.get('min')
             return datetime.datetime(date.year, date.month, date.day,
-                                     hour, int(groups['min']),
+                                     hour, int(minutes) if minutes is not None else 0,
                                      tzinfo=PST())
         return None
 
