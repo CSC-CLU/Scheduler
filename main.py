@@ -11,12 +11,27 @@ async def update_events(ctx: interactions.CommandContext):
     await ctx.send("Events updated!")
 
 
+# gets a list of scheduled events for easy iterating
+async def get_scheduled_events(ctx: interactions.CommandContext) -> list[interactions.ScheduledEvents]:
+    return list(map(
+        lambda event: interactions.ScheduledEvents(**event),
+        await ctx.client.get_scheduled_events(ctx.guild_id, False)
+    ))
+
 @bot.command(name="clear_events", description="clear all events created by this bot")
 async def clear_events(ctx: interactions.CommandContext):
-    await ctx.get_guild()
-    interactions.api.http.Route("GET", f"/guilds/{ctx.guild.id}")
-    print(ctx.guild.guild_scheduled_events)
-
+    guild = await ctx.get_guild()
+    res = ""
+    for event in await get_scheduled_events(ctx):
+        # fixme this deletes all events unconditionally.
+        if event.creator_id == ctx.application_id:
+            await guild.delete_scheduled_event(event.id)
+            if res:
+                res += "\n"
+            res += f"deleted {event.name} for {event.scheduled_start_time}"
+    if not res:
+        res = "No events deleted."
+    await ctx.send(res)
 
 day_of_week = interactions.Option(
     name="day", description="day being held",
