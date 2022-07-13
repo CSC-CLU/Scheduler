@@ -3,7 +3,7 @@ import re
 import interactions
 from sys import argv
 
-from timezone import PST
+import timezone
 
 bot = interactions.Client(token=argv[1])
 @bot.command(name="update_events", description="populate the discord with this week's hours")
@@ -82,8 +82,9 @@ async def add(ctx: interactions.CommandContext,
                 hour += 12
             minutes = groups.get('min')
             return datetime.datetime(date.year, date.month, date.day,
-                                     hour, int(minutes) if minutes is not None else 0,
-                                     tzinfo=PST())
+                                     hour,
+                                     int(minutes) if minutes is not None else 0,
+                                     tzinfo=timezone.Pacific)
         return None
 
     start_time = time(start_time)
