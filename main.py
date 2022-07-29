@@ -1,11 +1,23 @@
 import datetime
+import json
 import re
 import interactions
 from sys import argv
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from google.oauth2 import service_account
 
 import timezone
 
 bot = interactions.Client(token=argv[1])
+
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+CALENDARID = 'c_bl50f8rco2lngfb3vru2l7fiso@group.calendar.google.com'
+SERVICE_ACCOUNT_FILE = 'credentials.json'
+creds = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+service = build('calendar', 'v3', credentials=creds)
+
+
 @bot.command(name="update_events", description="populate the discord with this week's hours")
 async def update_events(ctx: interactions.CommandContext):
     await ctx.send("Events updated!")
@@ -17,6 +29,7 @@ async def get_scheduled_events(ctx: interactions.CommandContext) -> list[interac
         lambda event: interactions.ScheduledEvents(**event),
         await ctx.client.get_scheduled_events(ctx.guild_id, False)
     ))
+
 
 @bot.command(name="clear_events", description="clear all events created by this bot")
 async def clear_events(ctx: interactions.CommandContext):
@@ -48,6 +61,8 @@ async def get_hours(ctx: interactions.CommandContext, user: interactions.User):
     matches = filter(lambda event: event.description.startswith(user.mention), (await get_scheduled_events(ctx))[::-1])
     res = str.join('\n', map(lambda e: 'https://discord.gg/whW3SsZUqG?event=' + str(e.id), matches))
     await ctx.send(res if res else f"No events found for {user.mention}")
+
+
 def __relative_date(day: int):
     today = datetime.date.today()
     days_from_today = ((day + 7) - today.weekday()) % 7
@@ -56,6 +71,7 @@ def __relative_date(day: int):
 
 
 time_format_m = re.compile("(?P<hour>1[0-2]|[1-9])(:(?P<min>[0-5]\\d)|)(?P<m>[a|p]m)")
+
 
 def __time12(time_str):
     match = time_format_m.fullmatch(time_str)
@@ -71,7 +87,8 @@ def __time12(time_str):
 
 
 def __datetime(date: datetime.date, time: datetime.time) -> datetime.datetime:
-    return datetime.datetime(date.year,date.month,date.day,time.hour,time.minute,time.second,time.microsecond,time.tzinfo)
+    return datetime.datetime(date.year, date.month, date.day, time.hour, time.minute, time.second, time.microsecond,
+                             time.tzinfo)
 
 
 day_of_week = interactions.Option(
@@ -106,7 +123,7 @@ day_of_week = interactions.Option(
                                      ),
              ])
 async def add(ctx: interactions.CommandContext,
-              user: interactions.User, day, start_time, end_time):
+              user: interactions.User, day, start_time, end_time, location = "D13"):
     # todo move to own method logic
     date = __relative_date(day)
     # calculate proper start time
@@ -120,12 +137,42 @@ async def add(ctx: interactions.CommandContext,
 
     if start_time is not None and end_time is not None:
         await ctx.get_guild()
-        await ctx.guild.create_scheduled_event(
+        discordEvent = await ctx.guild.create_scheduled_event(
             "DA Hours", interactions.EntityType.EXTERNAL,
             start_time.isoformat(), end_time.isoformat(),
-            interactions.EventMetadata(location='D13'),
+            interactions.EventMetadata(location=location),
             description=f"{user.mention} will be holding DA hours.",
         )
+        service = build('calendar', 'v3', credentials=creds)
+        gCalBody = json.dumps(
+            {"attachments": "None",
+             "attendees": "None",
+             "created": datetime.datetime.now(timezone.Pacific).__str__(),
+             "creator":
+                 {"displayName": ctx.user.__str__(),
+                  "email": "None",
+                  "id": "None"},
+             "description": discordEvent.id.__str__(),
+             "end":
+                 {"dateTime": end_time.__str__(),
+                  "timeZone": "America/Los_Angeles"},
+             "eventType": "default",
+             "location": location,
+             "organizer":
+                 {"displayName": ctx.user.__str__(),
+                  "email": "None",
+                  "id": "None"},
+             "reminders":
+                 {"useDefault": True},
+             "source":
+                 {"title": "CSC@CLU Discord Bot",
+                  "url": "none"},
+             "start":
+                 {"dateTime": start_time.__str__(),
+                  "timeZone": "America/Los_Angeles"},
+             "summary": user.__str__() + "'s DA hours",
+             "updated": datetime.datetime.now(timezone.Pacific).__str__()})
+        service.events().insert(calendarId=CALENDARID, body=gCalBody).execute()
         msg = f"Added hours for {user.mention} on " \
               + start_time.strftime("%a %m/%d from %I:%M%p") \
               + " to " + end_time.strftime("%I:%M%p")

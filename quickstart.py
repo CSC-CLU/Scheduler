@@ -23,11 +23,12 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from google.cloud import storage
+# from google.cloud import storage
 from google.oauth2 import service_account
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+CALENDARID = 'c_bl50f8rco2lngfb3vru2l7fiso@group.calendar.google.com'
 
 
 def main():
@@ -43,7 +44,7 @@ def main():
         # Call the Calendar API
         now = datetime.datetime.utcnow().isoformat() + 'Z'  # 'Z' indicates UTC time
         print('Getting the upcoming 10 events')
-        events_result = service.events().list(calendarId='c_bl50f8rco2lngfb3vru2l7fiso@group.calendar.google.com', timeMin=now,
+        events_result = service.events().list(calendarId=CALENDARID, timeMin=now,
                                               maxResults=10, singleEvents=True,
                                               orderBy='startTime').execute()
         events = events_result.get('items', [])
